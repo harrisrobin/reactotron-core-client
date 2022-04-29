@@ -35,9 +35,7 @@ function getFunctionName(fn: any): string {
  *  @param {any} source - The victim.
  */
 function serialize(source, proxyHack = false) {
-  const stack = []
-  const keys = []
-
+  const seen = new WeakSet();
   /**
    * Replace this object node with something potentially custom.
    *
@@ -85,16 +83,14 @@ function serialize(source, proxyHack = false) {
         return [...value]
       }
 
-      if (stack.length > 0) {
-        // check for prior existance
-        const thisPos = stack.indexOf(this)
-        ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
-        ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
-        if (~stack.indexOf(value)) value = CIRCULAR
-      } else {
-        stack.push(value)
+      // check for prior existance
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value)) {
+          value = CIRCULAR
+          return;
+        }
+        seen.add(value);
       }
-
       return replacer == null ? value : replacer.call(this, key, value)
     }
   }
